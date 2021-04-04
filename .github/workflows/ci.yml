@@ -1,0 +1,183 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Continuous Integration
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  create:
+    tags:
+      - "v*"
+
+env:
+  CACHE_BUSTER: 1
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
+
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint project
+        run: python -m pylint --rcfile=./pylintrc.cfg
+      - name: Test project
+        run: |
+          python -m pytest \
+            --junit-xml=./test-results/test-results.xml \
+            --cov=incognitus_client --cov-report=xml:./test-results/coverage.xml \
+            --cov-report=html:./test-results/report
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        env:
+          PYTHON_VER: ${{ matrix.python-version }}
+        with:
+          env_vars: PYTHON_VER
+          path_to_write_report: ./test-results/coverage.xml
+          verbose: true
+      - name: Persisting coverage
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: test-results/report
+      - name: Persisting test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: tests-${{ matrix.python-version }}
+          path: test-results/test-results.xml
+
+  deploy-next:
+    runs-on: ubuntu-18.04
+    needs: test
+    if: github.ref == 'refs/heads/master'
+
+    env:
+      NODE_ENV: production
+
+    steps:
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate version
+        id: pkg-info
+        run: |
+          git clone --bare ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} ../metadata
+          pushd ../metadata
+
+          latestTag=$(git rev-list --tags --max-count=1)
+          firstCommit=$(git rev-list --max-parents=0 HEAD)
+          build="$(git rev-list --count ${latestTag:=${firstCommit}}..HEAD)"
+
+          popd
+          setupVer=$(grep "version = " setup.cfg | cut -d' ' -f3)
+          version="${$setupVer}-dev${build}"
+
+          echo ::set-output name=setup_version::${setupVer}
+          echo ::set-output name=version::${version}
+      - name: Prep setup.cfg for release
+        env:
+          SETUP_VERSION: ${{ steps.pkg-info.outputs.setup_version }}
+          PKG_VERSION: ${{ steps.pkg-info.outputs.version }}
+        run: |
+          sed -i 's/version = ${SETUP_VERSION}/version = ${PKG_VERSION}/g' setup.cfg
+      - name: Build library package
+        run: python setup.py sdist bdist_wheel
+
+      - name: Deploy to pypi
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: python -m twine upload dist/*
+
+  deploy-latest:
+    runs-on: ubuntu-18.04
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    env:
+      NODE_ENV: production
+
+    steps:
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Generate version
+        id: pkg-info
+        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
+
+      - name: Prep setup.cfg for release
+        env:
+          SETUP_VERSION: ${{ steps.pkg-info.outputs.setup_version }}
+          PKG_VERSION: ${{ steps.pkg-info.outputs.version }}
+        run: |
+          sed -i 's/version = ${SETUP_VERSION}/version = ${PKG_VERSION}/g' setup.cfg
+      - name: Build library package
+        run: python setup.py sdist bdist_wheel
+
+      - name: Deploy to pypi
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: python -m twine upload dist/*
