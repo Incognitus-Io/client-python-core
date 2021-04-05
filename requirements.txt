@@ -1,5 +1,8 @@
 pylint
 pytest
 pytest-cov
+requests
+requests-mock
+mock
 twine
 wheel
