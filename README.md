@@ -1,7 +1,7 @@
 # Incognitus Feature Flag
 
 ![Continuous Integration](https://github.com/Incognitus-Io/client-python-core/workflows/Continuous%20Integration/badge.svg)
-[![codecov](https://codecov.io/gh/Incognitus-Io/client-python-core/branch/master/graph/badge.svg?token={{ codecov token }})](https://codecov.io/gh/Incognitus-Io/client-python-core)
+[![codecov](https://codecov.io/gh/Incognitus-Io/client-python-core/branch/master/graph/badge.svg?token=Bztt7J8tUJ)](https://codecov.io/gh/Incognitus-Io/client-python-core)
 
 ## Integrating Incognitus
 

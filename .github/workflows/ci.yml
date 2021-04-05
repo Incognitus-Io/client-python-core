@@ -130,8 +130,8 @@ jobs:
 
       - name: Deploy to pypi
         env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: python -m twine upload dist/*
 
   deploy-latest:
@@ -179,5 +179,5 @@ jobs:
       - name: Deploy to pypi
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: $ {{ secrets.PYPI_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: python -m twine upload dist/*
