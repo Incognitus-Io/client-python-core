@@ -165,7 +165,11 @@ jobs:
           pip install -r requirements.txt
       - name: Generate version
         id: pkg-info
-        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
+        run: |
+          setupVer=$(grep "version = " setup.cfg | cut -d' ' -f3)
+
+          echo ::set-output name=setup_version::${setupVer}
+          echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
 
       - name: Prep setup.cfg for release
         env:
