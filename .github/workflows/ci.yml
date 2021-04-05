@@ -124,7 +124,7 @@ jobs:
           SETUP_VERSION: ${{ steps.pkg-info.outputs.setup_version }}
           PKG_VERSION: ${{ steps.pkg-info.outputs.version }}
         run: |
-          sed -i 's/version = ${SETUP_VERSION}/version = ${PKG_VERSION}/g' setup.cfg
+          sed -i "s/version = ${SETUP_VERSION}/version = ${PKG_VERSION}/" ./setup.cfg
       - name: Build library package
         run: python setup.py sdist bdist_wheel
 
@@ -172,7 +172,7 @@ jobs:
           SETUP_VERSION: ${{ steps.pkg-info.outputs.setup_version }}
           PKG_VERSION: ${{ steps.pkg-info.outputs.version }}
         run: |
-          sed -i 's/version = ${SETUP_VERSION}/version = ${PKG_VERSION}/g' setup.cfg
+          sed -i "s/version = ${SETUP_VERSION}/version = ${PKG_VERSION}/" ./setup.cfg
       - name: Build library package
         run: python setup.py sdist bdist_wheel
 
