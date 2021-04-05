@@ -1,3 +1,5 @@
+"""Incognitus python client"""
+
 from typing import Optional, Type
 import requests
 

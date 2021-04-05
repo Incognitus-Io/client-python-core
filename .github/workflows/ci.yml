@@ -47,7 +47,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Lint project
-        run: python -m pylint --rcfile=./pylintrc.cfg
+        run: python -m pylint --rcfile=./pylintrc.cfg ./incognitus_client
       - name: Test project
         run: |
           python -m pytest \
