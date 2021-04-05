@@ -115,7 +115,7 @@ jobs:
 
           popd
           setupVer=$(grep "version = " setup.cfg | cut -d' ' -f3)
-          version="${$setupVer}-dev${build}"
+          version="${setupVer}-dev${build}"
 
           echo ::set-output name=setup_version::${setupVer}
           echo ::set-output name=version::${version}
